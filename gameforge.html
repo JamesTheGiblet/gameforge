@@ -1,0 +1,2338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 GameForge - Evolutionary Game Design</title>
+    <meta name="description" content="Evolve playable games through genetic algorithms. Watch as mechanics, physics, and fun emerge through natural selection.">
+    
+    <style>
+        /* ===========================
+           RESET & BASE STYLES
+        =========================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Colors */
+            --bg-gradient-1: #0f0c29;
+            --bg-gradient-2: #302b63;
+            --bg-gradient-3: #24243e;
+            --panel-bg: rgba(255, 255, 255, 0.05);
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --accent-primary: #00d4ff;
+            --accent-secondary: #ff00ff;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --danger: #ff4444;
+            
+            /* Spacing */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --spacing-xl: 32px;
+            
+            /* Borders */
+            --border-radius: 8px;
+            --border-radius-lg: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2), var(--bg-gradient-3));
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* ===========================
+           LAYOUT
+        =========================== */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+            padding: var(--spacing-lg);
+            background: var(--panel-bg);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--panel-border);
+        }
+
+        header h1 {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-sm);
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .game-section {
+            background: var(--panel-bg);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--panel-border);
+            padding: var(--spacing-lg);
+        }
+
+        .controls-section {
+            background: var(--panel-bg);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--panel-border);
+            padding: var(--spacing-lg);
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        /* ===========================
+           GAME CANVAS
+        =========================== */
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            margin-bottom: var(--spacing-md);
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 600px;
+            cursor: crosshair;
+        }
+
+        .game-overlay {
+            position: absolute;
+            top: var(--spacing-md);
+            left: var(--spacing-md);
+            right: var(--spacing-md);
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .hud-item {
+            background: rgba(0, 0, 0, 0.7);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--border-radius);
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .game-info {
+            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-md);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+        }
+
+        .game-info h3 {
+            color: var(--accent-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .game-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-sm);
+        }
+
+        .stat {
+            text-align: center;
+            padding: var(--spacing-sm);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--border-radius);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--success);
+        }
+
+        /* ===========================
+           RATING SYSTEM
+        =========================== */
+        .rating-container {
+            text-align: center;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .stars {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            margin: var(--spacing-md) 0;
+        }
+
+        .star {
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .star:hover {
+            transform: scale(1.2);
+        }
+
+        .star.active {
+            color: #ffd700;
+            text-shadow: 0 0 10px #ffd700;
+        }
+
+        .star.inactive {
+            color: #555;
+        }
+
+        /* ===========================
+           BUTTONS
+        =========================== */
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        button {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(255, 0, 255, 0.2));
+            color: var(--text-primary);
+            border: 1px solid var(--accent-primary);
+            padding: var(--spacing-md);
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.4), rgba(255, 0, 255, 0.4));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+        }
+
+        button.success {
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            border: none;
+        }
+
+        button.danger {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            border: none;
+        }
+
+        /* ===========================
+           CONTROLS
+        =========================== */
+        .control-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .control-group h3 {
+            color: var(--accent-primary);
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        .control-item {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .control-item label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            padding: var(--spacing-sm);
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--border-radius);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        input[type="range"] {
+            cursor: pointer;
+        }
+
+        .slider-value {
+            display: inline-block;
+            color: var(--accent-primary);
+            font-weight: bold;
+        }
+
+        /* ===========================
+           EVOLUTION STATS
+        =========================== */
+        .evolution-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .evolution-stat {
+            padding: var(--spacing-md);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
+
+        .evolution-stat .label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .evolution-stat .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--success);
+        }
+
+        /* ===========================
+           GAME LIBRARY
+        =========================== */
+        .library-section {
+            background: var(--panel-bg);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius-lg);
+            border: 1px solid var(--panel-border);
+            padding: var(--spacing-lg);
+        }
+
+        .library-section h2 {
+            color: var(--accent-primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .library-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: var(--spacing-md);
+        }
+
+        .library-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .library-item:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-4px);
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+        }
+
+        .library-item h4 {
+            color: var(--accent-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .library-item-stats {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .library-item-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .library-item-actions button {
+            flex: 1;
+            padding: var(--spacing-sm);
+            font-size: 0.8rem;
+        }
+
+        /* ===========================
+           DNA DISPLAY
+        =========================== */
+        .dna-display {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .dna-category {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .dna-category h4 {
+            color: var(--accent-secondary);
+            margin-bottom: var(--spacing-sm);
+            font-size: 0.9rem;
+        }
+
+        .dna-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+            font-size: 0.85rem;
+        }
+
+        .dna-bar-label {
+            width: 100px;
+            color: var(--text-secondary);
+        }
+
+        .dna-bar-track {
+            flex: 1;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 0 var(--spacing-sm);
+        }
+
+        .dna-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: width 0.3s ease;
+        }
+
+        .dna-bar-value {
+            width: 50px;
+            text-align: right;
+            color: var(--accent-primary);
+            font-weight: bold;
+        }
+
+        .dna-bar-text .dna-bar-track {
+            background: transparent;
+        }
+
+        .dna-bar-text .dna-bar-value {
+            text-align: left;
+        }
+
+        /* ===========================
+           NOTIFICATIONS
+        =========================== */
+        .notification {
+            position: fixed;
+            top: var(--spacing-lg);
+            right: var(--spacing-lg);
+            background: var(--panel-bg);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--panel-border);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md) var(--spacing-lg);
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            max-width: 300px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            border-color: var(--success);
+        }
+
+        .notification.warning {
+            border-color: var(--warning);
+        }
+
+        .notification.danger {
+            border-color: var(--danger);
+        }
+
+        /* ===========================
+           GAME OVER SCREEN
+        =========================== */
+        .game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .game-over-overlay h2 {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-lg);
+            color: var(--danger);
+        }
+
+        .game-over-overlay .final-score {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-lg);
+            color: var(--success);
+        }
+
+        /* ===========================
+           SCROLLBAR
+        =========================== */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-secondary);
+        }
+
+        /* ===========================
+           RESPONSIVE
+        =========================== */
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .controls-section {
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2rem;
+            }
+
+            .button-group {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .library-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===========================
+           INSTRUCTIONS PANEL
+        =========================== */
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .instructions h4 {
+            color: var(--accent-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .instructions ul {
+            list-style: none;
+            padding-left: var(--spacing-md);
+        }
+
+        .instructions li {
+            margin-bottom: var(--spacing-xs);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .instructions li::before {
+            content: "▹ ";
+            color: var(--accent-primary);
+            font-weight: bold;
+        }
+    /* ===========================
+       UTILITY CLASSES
+    =========================== */
+    .full-width-btn {
+        width: 100%;
+    }
+    .mb-sm {
+        margin-bottom: var(--spacing-sm);
+    }
+    .auto-evolve-desc {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: var(--spacing-sm);
+    }
+    .library-empty-message {
+        grid-column: 1/-1;
+        text-align: center;
+        color: var(--text-secondary);
+        padding: var(--spacing-xl);
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🎮 GameForge</h1>
+            <p>Evolve Playable Games Through Genetic Algorithms</p>
+        </header>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Game Section -->
+            <div class="game-section">
+                <!-- Canvas Container -->
+                <div class="canvas-container">
+                    <canvas id="gameCanvas"></canvas>
+                    <div class="game-overlay">
+                        <div class="hud-item">Score: <span id="scoreDisplay">0</span></div>
+                        <div class="hud-item">Lives: <span id="livesDisplay">❤️❤️❤️</span></div>
+                        <div class="hud-item">Time: <span id="timeDisplay">0</span>s</div>
+                    </div>
+                </div>
+
+                <!-- Game Info -->
+                <div class="game-info">
+                    <h3>Current Game: <span id="gameName">Game #1</span></h3>
+                    <p><span id="gameGenre">Platformer</span> • Generation <span id="gameGeneration">1</span></p>
+                    
+                    <div class="game-stats">
+                        <div class="stat">
+                            <div class="stat-label">Fitness</div>
+                            <div class="stat-value" id="gameFitness">0.00</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">High Score</div>
+                            <div class="stat-value" id="gameHighScore">0</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Plays</div>
+                            <div class="stat-value" id="gamePlays">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rating -->
+                <div class="rating-container">
+                    <h4>Rate This Game:</h4>
+                    <div class="stars" id="starsContainer">
+                        <span class="star inactive" data-rating="1">★</span>
+                        <span class="star inactive" data-rating="2">★</span>
+                        <span class="star inactive" data-rating="3">★</span>
+                        <span class="star inactive" data-rating="4">★</span>
+                        <span class="star inactive" data-rating="5">★</span>
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="button-group">
+                    <button id="playBtn" class="success">▶️ Play</button>
+                    <button id="pauseBtn">⏸️ Pause</button>
+                    <button id="restartBtn">🔄 Restart</button>
+                    <button id="nextBtn" class="primary">⏭️ Next</button>
+                </div>
+
+                <div class="button-group">
+                    <button id="likeBtn" class="success">👍 Like</button>
+                    <button id="skipBtn" class="danger">👎 Skip</button>
+                    <button id="saveBtn">💾 Save</button>
+                    <button id="evolveBtn" class="primary">🧬 Evolve</button>
+                </div>
+
+                <!-- DNA Display -->
+                <div class="dna-display">
+                    <h3>Game DNA</h3>
+                    
+                    <div class="dna-category">
+                        <h4>🎯 Physics</h4>
+                        <div class="dna-bar">
+                            <span class="dna-bar-label">Gravity</span>
+                            <div class="dna-bar-track"><div class="dna-bar-fill" id="dna-gravity"></div></div>
+                            <span class="dna-bar-value" id="dna-gravity-val">0.0</span>
+                        </div>
+                        <div class="dna-bar">
+                            <span class="dna-bar-label">Jump</span>
+                            <div class="dna-bar-track"><div class="dna-bar-fill" id="dna-jump"></div></div>
+                            <span class="dna-bar-value" id="dna-jump-val">0.0</span>
+                        </div>
+                        <div class="dna-bar">
+                            <span class="dna-bar-label">Speed</span>
+                            <div class="dna-bar-track"><div class="dna-bar-fill" id="dna-speed"></div></div>
+                            <span class="dna-bar-value" id="dna-speed-val">0.0</span>
+                        </div>
+                        <div class="dna-bar">
+                            <span class="dna-bar-label">Friction</span>
+                            <div class="dna-bar-track"><div class="dna-bar-fill" id="dna-friction"></div></div>
+                            <span class="dna-bar-value" id="dna-friction-val">0.0</span>
+                        </div>
+                    </div>
+
+                    <div class="dna-category">
+                        <h4>🏗️ Level Design</h4>
+                        <div class="dna-bar">
+                            <span class="dna-bar-label">Platform #</span>
+                            <div class="dna-bar-track"><div class="dna-bar-fill" id="dna-platforms"></div></div>
+                            <span class="dna-bar-value" id="dna-platforms-val">0</span>
+                        </div>
+                        <div class="dna-bar">
+                            <span class="dna-bar-label">Enemies</span>
+                            <div class="dna-bar-track"><div class="dna-bar-fill" id="dna-enemies"></div></div>
+                            <span class="dna-bar-value" id="dna-enemies-val">0</span>
+                        </div>
+                        <div class="dna-bar">
+                            <span class="dna-bar-label">Collectible Freq</span>
+                            <div class="dna-bar-track"><div class="dna-bar-fill" id="dna-collectibles"></div></div>
+                            <span class="dna-bar-value" id="dna-collectibles-val">0.0</span>
+                        </div>
+                    </div>
+
+                    <div class="dna-category">
+                        <h4>💰 Scoring</h4>
+                        <div class="dna-bar">
+                            <span class="dna-bar-label">Collectible Val</span>
+                            <div class="dna-bar-track"><div class="dna-bar-fill" id="dna-collectibleValue"></div></div>
+                            <span class="dna-bar-value" id="dna-collectibleValue-val">0</span>
+                        </div>
+                    </div>
+                    <div class="dna-category">
+                        <h4>🎨 Visual Style</h4>
+                        <div class="dna-bar dna-bar-text">
+                            <span class="dna-bar-label">Palette</span>
+                            <div class="dna-bar-track"><div class="dna-bar-fill" id="dna-palette"></div></div>
+                            <span class="dna-bar-value" id="dna-palette-val">Vibrant</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <!-- Instructions -->
+                <div class="instructions">
+                    <h4>🎮 Controls</h4>
+                    <ul>
+                        <li>Arrow Keys / WASD - Move</li>
+                        <li>Space - Jump</li>
+                        <li>Click Stars - Rate Fun</li>
+                        <li>Like/Skip - Guide Evolution</li>
+                    </ul>
+                </div>
+
+                <!-- Evolution Controls -->
+                <div class="control-group">
+                    <h3>🧬 Evolution Controls</h3>
+                    
+                    <div class="control-item">
+                        <label>
+                            Environment
+                        </label>
+                        <select id="environmentSelect" title="Select environment">
+                            <option value="balanced">🎯 Balanced</option>
+                            <option value="intense">🔥 Intense</option>
+                            <option value="casual">😌 Casual</option>
+                            <option value="chaotic">🎲 Chaotic</option>
+                            <option value="competitive">🏆 Competitive</option>
+                            <option value="strategic">🧠 Strategic</option>
+                            <option value="beginner">👶 Beginner</option>
+                        </select>
+                    </div>
+
+                    <div class="control-item">
+                        <label>
+                            Mutation Rate
+                            <span class="slider-value" id="mutationValue">15%</span>
+                        </label>
+                        <input type="range" id="mutationSlider" min="1" max="50" value="15" title="Set mutation rate">
+                    </div>
+
+                    <div class="control-item">
+                        <label>
+                            Population Size
+                            <span class="slider-value" id="populationValue">20</span>
+                        </label>
+                        <input type="range" id="populationSlider" min="10" max="50" value="20" title="Set population size">
+                    </div>
+
+                    <div class="control-item">
+                        <label>Genre</label>
+                        <select id="genreSelect" title="Select genre">
+                            <option value="platformer">🏃 Platformer</option>
+                            <option value="runner">👟 Endless Runner</option>
+                            <option value="puzzle" disabled>🧩 Puzzle (Coming Soon)</option>
+                        </select>
+                    </div>
+
+                    <div class="control-item toggle-switch-container">
+                        <label for="autoNextToggle" class="control-item-label" title="Automatically load the next game after rating.">
+                            Auto-Next on Rate
+                        </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoNextToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Evolution Stats -->
+                <div class="control-group">
+                    <h3>📊 Evolution Stats</h3>
+                    
+                    <div class="evolution-stats">
+                        <div class="evolution-stat">
+                            <div class="label">Generation</div>
+                            <div class="value" id="generationStat">1</div>
+                        </div>
+                        <div class="evolution-stat">
+                            <div class="label">Best Fitness</div>
+                            <div class="value" id="bestFitnessStat">0.00</div>
+                        </div>
+                        <div class="evolution-stat">
+                            <div class="label">Avg Fitness</div>
+                            <div class="value" id="avgFitnessStat">0.00</div>
+                        </div>
+                        <div class="evolution-stat">
+                            <div class="label">Population</div>
+                            <div class="value" id="populationStat">20</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto Evolve -->
+                <div class="control-group">
+                    <h3>🤖 Auto Evolve</h3>
+                    <button id="autoEvolveBtn" class="full-width-btn">Start Auto-Evolve</button>
+                    <p class="auto-evolve-desc">Automatically cycles through games and evolves based on ratings.</p>
+                </div>
+
+                <!-- Export -->
+                <div class="control-group">
+                    <h3>💾 Export</h3>
+                    <button id="exportCurrentBtn" class="full-width-btn mb-sm">Export Current Game</button>
+                    <button id="exportLibraryBtn" class="full-width-btn">Export Library</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Library Section -->
+        <div class="library-section">
+            <h2>🏆 Saved Games Library (<span id="libraryCount">0</span>)</h2>
+            <div class="library-grid" id="libraryGrid">
+                <div class="library-empty-message">
+                    No saved games yet. Save your favorites to build your library!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===========================
+        // GAME ENGINE
+        // ===========================
+        
+        class GameEngine {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.width = canvas.width = 1000;
+                this.height = canvas.height = 600;
+                
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.gameOver = false;
+                
+                this.keys = {};
+                this.setupInput();
+                
+                // Game state
+                this.score = 0;
+                this.lives = 3;
+                this.time = 0;
+                this.startTime = 0;
+                
+                // Entities
+                this.player = null;
+                this.platforms = [];
+                this.enemies = [];
+                this.collectibles = [];
+                this.particles = [];
+                
+                // Current genome
+                this.currentGenome = null;
+                this.genre = 'platformer';
+            }
+            
+            setupInput() {
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.key.toLowerCase()] = true;
+                    if (e.key === ' ') e.preventDefault();
+                });
+                
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.key.toLowerCase()] = false;
+                });
+            }
+            
+            loadGenome(genome) {
+                this.currentGenome = genome;
+                this.genre = genome.genes.genre;
+                this.reset();
+                this.generateLevel();
+            }
+            
+            reset() {
+                this.score = 0;
+                this.lives = this.currentGenome?.genes.lives || 3;
+                this.time = 0;
+                this.startTime = Date.now();
+                this.gameOver = false;
+                this.isPaused = false;
+                
+                this.platforms = [];
+                this.enemies = [];
+                this.collectibles = [];
+                this.particles = [];
+                
+                if (this.genre === 'platformer') {
+                    this.createPlatformerPlayer();
+                } else if (this.genre === 'runner') {
+                    this.createRunnerPlayer();
+                }
+            }
+
+            createPlatformerPlayer() {
+                const g = this.currentGenome.genes;
+                const colors = this.getPaletteColors();
+                this.player = {
+                    x: 100,
+                    y: 400,
+                    width: 30,
+                    height: 30,
+                    vx: 0,
+                    vy: 0,
+                    speed: g.playerSpeed,
+                    jumpForce: g.jumpForce,
+                    gravity: g.gravity,
+                    onGround: false,
+                    color: colors[0]
+                };
+            }
+
+            createRunnerPlayer() {
+                const g = this.currentGenome.genes;
+                const colors = this.getPaletteColors();
+                this.player = {
+                    x: 100,
+                    y: this.height / 2,
+                    width: 30,
+                    height: 30,
+                    targetLane: Math.floor(g.laneCount / 2),
+                    switchSpeed: g.switchSpeed,
+                    color: colors[0]
+                };
+            }
+            
+            generateLevel() {
+                if (this.genre === 'platformer') {
+                    this.generatePlatformerLevel();
+                } else if (this.genre === 'runner') {
+                    this.generateRunnerLevel();
+                }
+            }
+
+            generatePlatformerLevel() {
+                const g = this.currentGenome.genes;
+                const colors = this.getPaletteColors();
+                
+                // Generate platforms
+                this.platforms = [];
+                this.enemies = [];
+                this.collectibles = [];
+
+                const platformCount = Math.floor(g.platformCount);
+                for (let i = 0; i < platformCount; i++) {
+                    const x = (i + 1) * (this.width / (platformCount + 1)) + (Math.random() - 0.5) * 100;
+                    const y = 500 - Math.random() * 300;
+                    const width = 80 + Math.random() * 100;
+                    const height = 20;
+                    
+                    this.platforms.push({
+                        x, y, width, height,
+                        color: colors[1]
+                    });
+                }
+                
+                // Ground platform
+                this.platforms.push({
+                    x: 0,
+                    y: this.height - 40,
+                    width: this.width,
+                    height: 40,
+                    color: colors[1]
+                });
+                
+                // Generate enemies
+                const enemyCount = Math.floor(g.enemyCount);
+                for (let i = 0; i < enemyCount; i++) {
+                    const platform = this.platforms[Math.floor(Math.random() * (this.platforms.length - 1))];
+                    this.enemies.push({
+                        x: platform.x + Math.random() * platform.width,
+                        y: platform.y - 30,
+                        width: 25,
+                        height: 25,
+                        vx: g.enemySpeed * (Math.random() > 0.5 ? 1 : -1),
+                        pattern: ['patrol', 'chase'][Math.floor(Math.random() * 2)],
+                        color: colors[2],
+                        patrolMin: platform.x,
+                        patrolMax: platform.x + platform.width
+                    });
+                }
+                
+                // Generate collectibles
+                const collectibleCount = Math.floor(g.collectibleFrequency * 10);
+                for (let i = 0; i < collectibleCount; i++) {
+                    const platform = this.platforms[Math.floor(Math.random() * this.platforms.length)];
+                    this.collectibles.push({
+                        x: platform.x + Math.random() * platform.width,
+                        y: platform.y - 60 - Math.random() * 100,
+                        size: 15,
+                        value: g.collectibleValue,
+                        color: colors[3],
+                        collected: false
+                    });
+                }
+            }
+
+            generateRunnerLevel() {
+                const g = this.currentGenome.genes;
+                this.obstacles = [];
+                this.collectibles = [];
+                this.scrollSpeed = g.initialSpeed;
+                this.nextObstacleDist = 200;
+            }
+
+            spawnRunnerEntities() {
+                const g = this.currentGenome.genes;
+                const colors = this.getPaletteColors();
+                const laneHeight = this.height / g.laneCount;
+
+                if (Math.random() < g.obstacleFrequency) {
+                    const lane = Math.floor(Math.random() * g.laneCount);
+                    this.obstacles.push({
+                        x: this.width,
+                        y: lane * laneHeight + laneHeight / 2 - 15,
+                        width: 50 + Math.random() * 50,
+                        height: 30,
+                        color: colors[2]
+                    });
+                }
+                this.nextObstacleDist = 200 + Math.random() * 800;
+            }
+            
+            getPaletteColors() {
+                const palettes = {
+                    vibrant: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'],
+                    pastel: ['#FFB3BA', '#BAFFC9', '#BAE1FF', '#FFFFBA', '#E0BBE4'],
+                    neon: ['#FF00FF', '#00FFFF', '#FFFF00', '#FF0099', '#00FF99'],
+                    retro: ['#E63946', '#F1FAEE', '#A8DADC', '#457B9D', '#1D3557'],
+                    nature: ['#2D6A4F', '#52B788', '#95D5B2', '#D8F3DC', '#74C69D'],
+                    fire: ['#FF4500', '#FF6347', '#FFD700', '#FFA500', '#FF8C00'],
+                    ice: ['#00CED1', '#4682B4', '#87CEEB', '#B0E0E6', '#ADD8E6'],
+                    cyberpunk: ['#FF006E', '#8338EC', '#3A86FF', '#FB5607', '#FFBE0B']
+                };
+                
+                const paletteName = this.currentGenome?.genes.colorPalette || 'vibrant';
+                return palettes[paletteName] || palettes.vibrant;
+            }
+            
+            start() {
+                this.isPlaying = true;
+                this.gameLoop();
+            }
+            
+            pause() {
+                this.isPaused = !this.isPaused;
+            }
+            
+            stop() {
+                this.isPlaying = false;
+            }
+            
+            gameLoop() {
+                if (!this.isPlaying) return;
+                
+                if (!this.isPaused && !this.gameOver) {
+                    this.update();
+                }
+                this.render();
+                
+                requestAnimationFrame(() => this.gameLoop());
+            }
+            
+            update() {
+                this.time = Math.floor((Date.now() - this.startTime) / 1000);
+                
+                // Update player
+                if (this.genre === 'platformer') {
+                    this.updatePlatformer();
+                } else if (this.genre === 'runner') {
+                    this.updateRunner();
+                }
+
+                // Update particles
+                this.updateParticles();
+
+                // Check game over
+                if (this.lives <= 0 && !this.gameOver) {
+                    this.gameOver = true;
+                    this.onGameOver();
+                }
+            }
+
+            updatePlatformer() {
+                this.updatePlatformerPlayer();
+                this.updateEnemies();
+                this.updateCollectibles();
+            }
+
+            updateRunner() {
+                this.updateRunnerPlayer();
+                this.updateRunnerObstacles();
+            }
+            
+            updatePlatformerPlayer() {
+                const p = this.player;
+                
+                // Horizontal movement
+                if (this.keys['arrowleft'] || this.keys['a']) {
+                    p.vx = -p.speed;
+                } else if (this.keys['arrowright'] || this.keys['d']) {
+                    p.vx = p.speed;
+                } else {
+                    p.vx *= 0.8; // Friction
+                }
+                
+                // Jump
+                if ((this.keys[' '] || this.keys['arrowup'] || this.keys['w']) && p.onGround) {
+                    p.vy = -p.jumpForce;
+                    p.onGround = false;
+                }
+                
+                // Apply gravity
+                p.vy += p.gravity;
+                
+                // Update position
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                // Boundaries
+                if (p.x < 0) p.x = 0;
+                if (p.x > this.width - p.width) p.x = this.width - p.width;
+                
+                // Platform collision
+                p.onGround = false;
+                for (const platform of this.platforms) {
+                    if (this.checkCollision(p, platform)) {
+                        if (p.vy > 0) { // Falling
+                            p.y = platform.y - p.height;
+                            p.vy = 0;
+                            p.onGround = true;
+                        }
+                    }
+                }
+                
+                // Fall death
+                if (p.y > this.height) {
+                    this.loseLife();
+                }
+                
+                // Enemy collision
+                for (const enemy of this.enemies) {
+                    if (this.checkCollision(p, enemy)) {
+                        this.loseLife();
+                        break;
+                    }
+                }
+            }
+            
+            updateRunnerPlayer() {
+                const p = this.player;
+                const g = this.currentGenome.genes;
+                const laneHeight = this.height / g.laneCount;
+
+                if ((this.keys['arrowup'] || this.keys['w'])) {
+                    p.targetLane = Math.max(0, p.targetLane - 1);
+                    this.keys['arrowup'] = this.keys['w'] = false; // Consume input
+                }
+                if ((this.keys['arrowdown'] || this.keys['s'])) {
+                    p.targetLane = Math.min(g.laneCount - 1, p.targetLane + 1);
+                    this.keys['arrowdown'] = this.keys['s'] = false; // Consume input
+                }
+
+                const targetY = p.targetLane * laneHeight + (laneHeight / 2) - (p.height / 2);
+                p.y += (targetY - p.y) * p.switchSpeed;
+
+                // Obstacle collision
+                for (const obstacle of this.obstacles) {
+                    if (this.checkCollision(p, obstacle)) {
+                        this.loseLife();
+                        break;
+                    }
+                }
+            }
+
+            updateRunnerObstacles() {
+                this.nextObstacleDist -= this.scrollSpeed;
+                if (this.nextObstacleDist <= 0) {
+                    this.spawnRunnerEntities();
+                }
+                this.scrollSpeed += this.currentGenome.genes.speedIncrease;
+            }
+
+            updateEnemies() {
+                for (const enemy of this.enemies) {
+                    if (enemy.pattern === 'patrol') {
+                        enemy.x += enemy.vx;
+                        if (enemy.x < enemy.patrolMin || enemy.x > enemy.patrolMax - enemy.width) {
+                            enemy.vx *= -1;
+                        }
+                    } else if (enemy.pattern === 'chase') {
+                        const dx = this.player.x - enemy.x;
+                        if (Math.abs(dx) < 300) {
+                            enemy.vx = Math.sign(dx) * Math.abs(enemy.vx);
+                            enemy.x += enemy.vx;
+                        }
+                    }
+                }
+            }
+            
+            updateCollectibles() {
+                for (const collectible of this.collectibles) {
+                    if (!collectible.collected && this.checkCollision(this.player, {
+                        x: collectible.x - collectible.size,
+                        y: collectible.y - collectible.size,
+                        width: collectible.size * 2,
+                        height: collectible.size * 2
+                    })) {
+                        collectible.collected = true;
+                        this.score += collectible.value;
+                        this.createParticles(collectible.x, collectible.y, collectible.color);
+                    }
+                }
+            }
+            
+            updateParticles() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.2;
+                    p.life--;
+                    
+                    if (p.life <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+            }
+            
+            checkCollision(a, b) {
+                return a.x < b.x + b.width &&
+                       a.x + a.width > b.x &&
+                       a.y < b.y + b.height &&
+                       a.y + a.height > b.y;
+            }
+            
+            loseLife() {
+                if (this.gameOver) return;
+                this.lives--;
+                
+                if (this.genre === 'platformer') {
+                    this.player.x = 100;
+                    this.player.y = 400;
+                } else if (this.genre === 'runner') {
+                    // In runner, just create particles, no reset
+                    // Maybe a short invincibility period could be added here
+                }
+
+                this.player.vx = 0;
+                this.player.vy = 0;
+                
+                // Create death particles
+                this.createParticles(this.player.x + this.player.width / 2, 
+                                   this.player.y + this.player.height / 2, 
+                                   this.player.color);
+            }
+            
+            createParticles(x, y, color) {
+                for (let i = 0; i < 20; i++) {
+                    this.particles.push({
+                        x, y,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8,
+                        size: Math.random() * 5 + 2,
+                        color,
+                        life: 30
+                    });
+                }
+            }
+            
+            render() {
+                // Clear canvas
+                this.ctx.fillStyle = '#000';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+                
+                // Draw background pattern
+                this.drawBackground();
+                
+                if (this.genre === 'platformer') {
+                    this.renderPlatformer();
+                } else if (this.genre === 'runner') {
+                    this.renderRunner();
+                }
+
+                this.renderCommon();
+            }
+
+            renderPlatformer() {
+                // Draw platforms
+                for (const platform of this.platforms) {
+                    this.ctx.fillStyle = platform.color;
+                    this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    
+                    // Platform glow
+                    this.ctx.shadowBlur = 10;
+                    this.ctx.shadowColor = platform.color;
+                    this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    this.ctx.shadowBlur = 0;
+                }
+                
+                // Draw collectibles
+                for (const c of this.collectibles) {
+                    if (!c.collected) {
+                        this.ctx.save();
+                        this.ctx.translate(c.x, c.y);
+                        this.ctx.rotate(Date.now() / 500);
+                        
+                        this.ctx.fillStyle = c.color;
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, 0, c.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        this.ctx.shadowBlur = 15;
+                        this.ctx.shadowColor = c.color;
+                        this.ctx.fill();
+                        this.ctx.shadowBlur = 0;
+                        
+                        this.ctx.restore();
+                    }
+                }
+                
+                // Draw enemies
+                for (const enemy of this.enemies) {
+                    this.ctx.fillStyle = enemy.color;
+                    this.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                    
+                    // Enemy glow
+                    this.ctx.shadowBlur = 10;
+                    this.ctx.shadowColor = enemy.color;
+                    this.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+                    this.ctx.shadowBlur = 0;
+                }
+            }
+
+            renderRunner() {
+                const g = this.currentGenome.genes;
+                const laneHeight = this.height / g.laneCount;
+                const colors = this.getPaletteColors();
+
+                // Draw lanes
+                this.ctx.strokeStyle = colors[1] + '30';
+                this.ctx.lineWidth = 2;
+                for (let i = 1; i < g.laneCount; i++) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, i * laneHeight);
+                    this.ctx.lineTo(this.width, i * laneHeight);
+                    this.ctx.stroke();
+                }
+
+                // Draw and move obstacles
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    const o = this.obstacles[i];
+                    o.x -= this.scrollSpeed;
+                    
+                    this.ctx.fillStyle = o.color;
+                    this.ctx.fillRect(o.x, o.y, o.width, o.height);
+
+                    if (o.x + o.width < 0) {
+                        this.obstacles.splice(i, 1);
+                        this.score += 10; // Score for surviving an obstacle
+                    }
+                }
+            }
+
+            renderCommon() {
+                // Draw player
+                if (!this.gameOver) {
+                    this.ctx.fillStyle = this.player.color;
+                    this.ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.shadowColor = this.player.color;
+                    this.ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
+                    this.ctx.shadowBlur = 0;
+                }
+                // Draw particles
+                for (const p of this.particles) {
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.globalAlpha = p.life / 30;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                this.ctx.globalAlpha = 1.0;
+                
+                // Draw game over
+                if (this.gameOver) {
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    this.ctx.fillRect(0, 0, this.width, this.height);
+                    
+                    this.ctx.fillStyle = '#ff4444';
+                    this.ctx.font = 'bold 60px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('GAME OVER', this.width / 2, this.height / 2 - 50);
+                    
+                    this.ctx.fillStyle = '#00ff88';
+                    this.ctx.font = 'bold 40px Arial';
+                    this.ctx.fillText(`Final Score: ${this.score}`, this.width / 2, this.height / 2 + 20);
+                    
+                    this.ctx.fillStyle = '#ffffff';
+                    this.ctx.font = '24px Arial';
+                    this.ctx.fillText('Press Restart to try again', this.width / 2, this.height / 2 + 80);
+                }
+            }
+            
+            drawBackground() {
+                const colors = this.getPaletteColors();
+                
+                // Gradient background
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
+                gradient.addColorStop(0, colors[0] + '20');
+                gradient.addColorStop(1, colors[1] + '20');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.width, this.height);
+                
+                // Grid pattern
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                this.ctx.lineWidth = 1;
+                for (let x = 0; x < this.width; x += 50) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.height);
+                    this.ctx.stroke();
+                }
+                for (let y = 0; y < this.height; y += 50) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, y);
+                    this.ctx.lineTo(this.width, y);
+                    this.ctx.stroke();
+                }
+            }
+            
+            onGameOver() {
+                // Calculate final fitness based on performance
+                const timeFactor = Math.min(this.time / 60, 1); // Max 60 seconds
+                const scoreFactor = Math.min(this.score / 1000, 1); // Max 1000 points
+                const survivalFactor = (this.currentGenome.genes.lives - this.lives) / this.currentGenome.genes.lives;
+                
+                const performanceFitness = (timeFactor * 0.3 + scoreFactor * 0.5 + (1 - survivalFactor) * 0.2);
+                
+                // Update genome
+                if (this.currentGenome) {
+                    this.currentGenome.plays++;
+                    this.currentGenome.lastScore = this.score;
+                    if (this.score > this.currentGenome.highScore) {
+                        this.currentGenome.highScore = this.score;
+                    }
+                    
+                    // Combine with user rating when available
+                    if (this.currentGenome.userRating > 0) {
+                        this.currentGenome.fitness = (this.currentGenome.userRating * 0.7 + performanceFitness * 0.3);
+                    } else {
+                        this.currentGenome.fitness = performanceFitness;
+                    }
+                }
+            }
+        }
+        
+        // ===========================
+        // GENETIC ALGORITHM
+        // ===========================
+        
+        class Genome {
+            constructor(genes = null, genre = 'platformer') {
+                if (genes) {
+                    this.genes = { ...genes };
+                } else {
+                    this.genes = this.randomGenes(genre);
+                }
+
+                this.fitness = 0;
+                this.userRating = 0;
+                this.generation = 1;
+                this.plays = 0;
+                this.highScore = 0;
+                this.lastScore = 0;
+                this.id = Date.now() + Math.random();
+            }
+            
+            randomGenes(genre) {
+                let genes = {
+                    genre: genre,
+                    // Shared genes
+                    collectibleFrequency: 0.3 + Math.random() * 0.7, // 0.3 - 1.0
+                    collectibleValue: 50 + Math.random() * 150, // 50 - 200
+                    lives: 3,
+                    colorPalette: ['vibrant', 'pastel', 'neon', 'retro', 'nature', 'fire', 'ice', 'cyberpunk'][Math.floor(Math.random() * 8)]
+                };
+
+                if (genre === 'platformer') {
+                    this.addPlatformerGenes(genes);
+                } else if (genre === 'runner') {
+                    this.addRunnerGenes(genes);
+                }
+                return genes;
+            }
+
+            addPlatformerGenes(genes) {
+                Object.assign(genes, {
+                    // Physics
+                    gravity: 0.3 + Math.random() * 0.7, // 0.3 - 1.0
+                    playerSpeed: 3 + Math.random() * 4, // 3 - 7
+                    jumpForce: 10 + Math.random() * 8, // 10 - 18
+                    friction: 0.5 + Math.random() * 0.5, // 0.5 - 1.0
+                    
+                    // Level Design
+                    platformCount: 5 + Math.random() * 15, // 5 - 20
+                    platformSize: 50 + Math.random() * 150, // 50 - 200
+                    verticalSpacing: 100 + Math.random() * 200, // 100 - 300
+                    
+                    // Enemies
+                    enemyCount: Math.floor(Math.random() * 6), // 0 - 5
+                    enemySpeed: 1 + Math.random() * 3, // 1 - 4
+                    
+                    timeBonus: 1 + Math.random() * 2 // 1 - 3
+                });
+            }
+
+            addRunnerGenes(genes) {
+                Object.assign(genes, {
+                    laneCount: Math.floor(2 + Math.random() * 4), // 2-5
+                    switchSpeed: 0.1 + Math.random() * 0.2, // 0.1 - 0.3
+                    initialSpeed: 4 + Math.random() * 4, // 4 - 8
+                    speedIncrease: 0.0005 + Math.random() * 0.001, // 0.0005 - 0.0015
+                    obstacleFrequency: 0.01 + Math.random() * 0.04 // 0.01 - 0.05
+                });
+            }
+            
+            mutate(rate) {
+                const genes = { ...this.genes };
+                const genre = genes.genre;
+
+                const newGenome = new Genome(genes, genre);
+                newGenome.genes.genre = genre; // Ensure genre is preserved
+                
+                for (const key in genes) {
+                    if (key === 'colorPalette') {
+                        if (Math.random() < rate) {
+                            const palettes = ['vibrant', 'pastel', 'neon', 'retro', 'nature', 'fire', 'ice', 'cyberpunk'];
+                            genes[key] = palettes[Math.floor(Math.random() * palettes.length)];
+                        }
+                    } else if (key === 'lives' || key === 'genre') {
+                        // Don't mutate lives
+                    } else {
+                        if (Math.random() < rate) {
+                            // Gaussian mutation
+                            const range = this.getGeneRange(key);
+                            const mutation = (Math.random() - 0.5) * (range[1] - range[0]) * 0.3;
+                            genes[key] = Math.max(range[0], Math.min(range[1], genes[key] + mutation));
+                        }
+                    }
+                }
+                
+                return newGenome;
+            }
+            
+            crossover(other) {
+                const genes = {};
+                
+                for (const key in this.genes) {
+                    genes[key] = Math.random() > 0.5 ? this.genes[key] : (other.genes[key] || this.genes[key]);
+                }
+                
+                return new Genome(genes);
+            }
+            
+            getGeneRange(key) {
+                const ranges = {
+                    gravity: [0.3, 1.0],
+                    playerSpeed: [3, 7],
+                    jumpForce: [10, 18],
+                    friction: [0.5, 1.0],
+                    platformCount: [5, 20],
+                    platformSize: [50, 200],
+                    verticalSpacing: [100, 300],
+                    enemyCount: [0, 5],
+                    enemySpeed: [1, 4],
+                    collectibleFrequency: [0.3, 1.0],
+                    collectibleValue: [50, 200],
+                    timeBonus: [1, 3],
+                    // Runner
+                    laneCount: [2, 5],
+                    switchSpeed: [0.1, 0.3],
+                    initialSpeed: [4, 8],
+                    speedIncrease: [0.0005, 0.0015],
+                    obstacleFrequency: [0.01, 0.05]
+                };
+                
+                return ranges[key] || [0, 1];
+            }
+            
+            clone() {
+                const cloned = new Genome(this.genes, this.genes.genre);
+                cloned.fitness = this.fitness;
+                cloned.userRating = this.userRating;
+                cloned.generation = this.generation;
+                cloned.plays = this.plays;
+                cloned.highScore = this.highScore;
+                cloned.lastScore = this.lastScore;
+                return cloned;
+            }
+        }
+        
+        class GeneticAlgorithm {
+            constructor(populationSize, genre = 'platformer') {
+                this.populationSize = populationSize;
+                this.population = [];
+                this.generation = 1;
+                this.currentIndex = 0;
+                this.environment = 'balanced';
+                this.mutationRate = 0.15;
+                this.genre = genre;
+
+                this.initializePopulation();
+            }
+            
+            initializePopulation() {
+                this.population = [];
+                for (let i = 0; i < this.populationSize; i++) {
+                    this.population.push(new Genome(null, this.genre));
+                }
+            }
+            
+            getCurrentGenome() {
+                return this.population[this.currentIndex];
+            }
+            
+            nextGenome() {
+                this.currentIndex = (this.currentIndex + 1) % this.population.length;
+                return this.getCurrentGenome();
+            }
+
+            setGenre(genre) {
+                this.genre = genre;
+                this.initializePopulation();
+            }
+            
+            evolve() {
+                // Apply environment fitness modifiers
+                this.applyEnvironmentFitness();
+                
+                // Sort by fitness
+                this.population.sort((a, b) => b.fitness - a.fitness);
+                
+                // Create new population
+                const newPopulation = [];
+                
+                // Elitism - keep top 30%
+                const eliteCount = Math.floor(this.populationSize * 0.3);
+                for (let i = 0; i < eliteCount; i++) {
+                    const eliteClone = this.population[i].clone();
+                    eliteClone.generation = this.generation + 1;
+                    newPopulation.push(eliteClone);
+                }
+                
+                // Generate offspring
+                while (newPopulation.length < this.populationSize) {
+                    const parent1 = this.tournamentSelect();
+                    const parent2 = this.tournamentSelect();
+                    
+                    let child = parent1.crossover(parent2);
+                    child = child.mutate(this.mutationRate);
+                    child.generation = this.generation + 1;
+                    
+                    newPopulation.push(child);
+                }
+                
+                this.population = newPopulation;
+                this.generation++;
+                this.currentIndex = 0;
+                
+                return this.getCurrentGenome();
+            }
+            
+            tournamentSelect(tournamentSize = 4) {
+                let best = null;
+                
+                for (let i = 0; i < tournamentSize; i++) {
+                    const competitor = this.population[Math.floor(Math.random() * this.population.length)];
+                    if (!best || competitor.fitness > best.fitness) {
+                        best = competitor;
+                    }
+                }
+                
+                return best;
+            }
+            
+            applyEnvironmentFitness() {
+                for (const genome of this.population) {
+                    let modifier = 1.0;
+                    const g = genome.genes;
+                    
+                    switch (this.environment) {
+                        case 'intense':
+                            // Reward high difficulty
+                            modifier *= (g.enemyCount / 5) * 1.5;
+                            modifier *= (g.gravity / 1.0) * 1.2;
+                            modifier *= (1 - g.collectibleFrequency) * 1.3;
+                            break;
+                            
+                        case 'casual':
+                            // Reward low difficulty
+                            modifier *= (1 - g.enemyCount / 5) * 1.5;
+                            modifier *= (1 - g.gravity / 1.0) * 1.2;
+                            modifier *= g.collectibleFrequency * 1.3;
+                            break;
+                            
+                        case 'chaotic':
+                            // Reward extremes
+                            modifier *= Math.abs(g.gravity - 0.65) * 2;
+                            modifier *= Math.abs(g.playerSpeed - 5) * 1.5;
+                            modifier *= (g.platformCount / 20) * 1.3;
+                            break;
+                            
+                        case 'competitive':
+                            // Reward high scores and time
+                            modifier *= (genome.highScore / 1000) * 2;
+                            break;
+                            
+                        case 'strategic':
+                            // Reward balanced stats
+                            const balance = 1 - Math.abs(g.platformCount / 20 - 0.5);
+                            modifier *= balance * 1.5;
+                            break;
+                            
+                        case 'beginner':
+                            // Reward easy, forgiving games
+                            modifier *= (1 - g.enemyCount / 5) * 2;
+                            modifier *= (g.jumpForce / 18) * 1.5;
+                            modifier *= g.collectibleFrequency * 1.3;
+                            break;
+                            
+                        case 'balanced':
+                        default:
+                            // No modifier, use raw fitness
+                            break;
+                    }
+                    
+                    genome.fitness *= modifier;
+                }
+            }
+            
+            getBestGenome() {
+                return this.population.reduce((best, current) => 
+                    current.fitness > best.fitness ? current : best
+                );
+            }
+            
+            getAverageFitness() {
+                const sum = this.population.reduce((acc, g) => acc + g.fitness, 0);
+                return sum / this.population.length;
+            }
+            
+            setPopulationSize(size) {
+                if (size > this.populationSize) {
+                    // Add random genomes
+                    while (this.population.length < size) {
+                        this.population.push(new Genome());
+                    }
+                } else if (size < this.populationSize) {
+                    // Remove worst genomes
+                    this.population.sort((a, b) => b.fitness - a.fitness);
+                    this.population = this.population.slice(0, size);
+                }
+                
+                this.populationSize = size;
+                this.currentIndex = Math.min(this.currentIndex, this.population.length - 1);
+            }
+        }
+        
+        // ===========================
+        // APPLICATION
+        // ===========================
+        
+        class GameForgeApp {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.engine = new GameEngine(this.canvas, 'platformer');
+                this.ga = new GeneticAlgorithm(20);
+                
+                this.library = this.loadLibrary();
+                this.autoEvolving = false;
+                this.autoNextEnabled = true;
+                this.autoEvolveInterval = null;
+                
+                this.setupUI();
+                this.loadGame(this.ga.getCurrentGenome());
+                this.updateAllUI();
+            }
+            
+            setupUI() {
+                // Play controls
+                document.getElementById('playBtn').addEventListener('click', () => {
+                    if (!this.engine.isPlaying) {
+                        this.engine.start();
+                        this.updatePlayButton();
+                    }
+                });
+                
+                document.getElementById('pauseBtn').addEventListener('click', () => {
+                    this.engine.pause();
+                });
+                
+                document.getElementById('restartBtn').addEventListener('click', () => {
+                    this.engine.reset();
+                    this.engine.start();
+                    this.updatePlayButton();
+                });
+                
+                document.getElementById('nextBtn').addEventListener('click', () => {
+                    this.nextGame();
+                });
+                
+                // Evolution controls
+                document.getElementById('likeBtn').addEventListener('click', () => {
+                    this.rateGame(5);
+                    if (this.autoNextEnabled) {
+                        this.nextGame();
+                    }
+                });
+                
+                document.getElementById('skipBtn').addEventListener('click', () => {
+                    this.rateGame(1);
+                    if (this.autoNextEnabled) {
+                        this.nextGame();
+                    }
+                });
+                
+                document.getElementById('saveBtn').addEventListener('click', () => {
+                    this.saveGame();
+                });
+                
+                document.getElementById('evolveBtn').addEventListener('click', () => {
+                    this.evolve();
+                });
+                
+                // Rating stars
+                document.querySelectorAll('.star').forEach(star => {
+                    star.addEventListener('click', () => {
+                        const rating = parseInt(star.dataset.rating);
+                        this.rateGame(rating);
+                    });
+                    
+                    star.addEventListener('mouseenter', () => {
+                        const rating = parseInt(star.dataset.rating);
+                        this.updateStars(rating, true);
+                    });
+                });
+                
+                document.getElementById('starsContainer').addEventListener('mouseleave', () => {
+                    const current = this.ga.getCurrentGenome().userRating;
+                    this.updateStars(current, false);
+                });
+                
+                // Settings
+                document.getElementById('environmentSelect').addEventListener('change', (e) => {
+                    this.ga.environment = e.target.value;
+                    this.showNotification('Environment changed to: ' + e.target.value, 'success');
+                });
+                
+                document.getElementById('mutationSlider').addEventListener('input', (e) => {
+                    this.ga.mutationRate = e.target.value / 100;
+                    document.getElementById('mutationValue').textContent = e.target.value + '%';
+                });
+                
+                document.getElementById('populationSlider').addEventListener('input', (e) => {
+                    this.ga.setPopulationSize(parseInt(e.target.value));
+                    document.getElementById('populationValue').textContent = e.target.value;
+                    this.updateAllUI();
+                });
+
+                document.getElementById('genreSelect').addEventListener('change', (e) => {
+                    this.ga.setGenre(e.target.value);
+                    this.loadGame(this.ga.getCurrentGenome());
+                    this.showNotification(`Genre changed to ${e.target.value}. New population created.`, 'success');
+                });
+
+                document.getElementById('autoNextToggle').addEventListener('change', (e) => {
+                    this.autoNextEnabled = e.target.checked;
+                    this.showNotification(`Auto-Next ${this.autoNextEnabled ? 'Enabled' : 'Disabled'}`, 'success');
+                });
+                // Export
+                document.getElementById('exportCurrentBtn').addEventListener('click', () => {
+                    this.exportGame(this.ga.getCurrentGenome());
+                });
+                
+                document.getElementById('exportLibraryBtn').addEventListener('click', () => {
+                    this.exportLibrary();
+                });
+
+                // Auto evolve (moved from duplicated section)
+                document.getElementById('autoEvolveBtn').addEventListener('click', () => {
+                    this.toggleAutoEvolve();
+                });
+                
+                // Update UI periodically
+                setInterval(() => {
+                    if (this.engine.isPlaying && !this.engine.isPaused && !this.engine.gameOver) {
+                        this.updateHUD();
+                    }
+                }, 100);
+            }
+            
+            loadGame(genome) {
+                this.engine.loadGenome(genome);
+                this.updateAllUI();
+                this.updateDNA();
+            }
+            
+            nextGame() {
+                const nextGenome = this.ga.nextGenome();
+                this.loadGame(nextGenome);
+            }
+            
+            rateGame(rating) {
+                const genome = this.ga.getCurrentGenome();
+                genome.userRating = rating / 5; // Normalize to 0-1
+                
+                // Combine with performance fitness if game was played
+                if (genome.plays > 0) {
+                    // User rating weighted 70%, performance 30%
+                    genome.fitness = genome.userRating * 0.7 + genome.fitness * 0.3;
+                } else {
+                    genome.fitness = genome.userRating;
+                }
+                
+                this.updateStars(rating, false);
+                this.showNotification(`Rated ${rating} stars!`, 'success');
+            }
+            
+            evolve() {
+                this.showNotification('Evolving new generation...', 'success');
+                this.ga.evolve();
+                this.loadGame(this.ga.getCurrentGenome());
+            }
+            
+            saveGame() {
+                const genome = this.ga.getCurrentGenome().clone();
+                const name = prompt('Name this game:', `Game #${genome.id.toString().slice(-4)}`);
+                
+                if (name) {
+                    genome.name = name;
+                    this.library.push(genome);
+                    this.saveLibrary();
+                    this.updateLibraryUI();
+                    this.showNotification('Game saved to library!', 'success');
+                }
+            }
+            
+            toggleAutoEvolve() {
+                this.autoEvolving = !this.autoEvolving;
+                const btn = document.getElementById('autoEvolveBtn');
+                
+                if (this.autoEvolving) {
+                    btn.textContent = 'Stop Auto-Evolve';
+                    btn.style.background = 'linear-gradient(135deg, #ff4444, #cc0000)';
+                    this.autoEvolveInterval = setInterval(() => {
+                        this.nextGame();
+                    }, 10000); // Next game every 10 seconds
+                } else {
+                    btn.textContent = 'Start Auto-Evolve';
+                    btn.style.background = '';
+                    clearInterval(this.autoEvolveInterval);
+                }
+            }
+            
+            updatePlayButton() {
+                const btn = document.getElementById('playBtn');
+                if (this.engine.isPlaying) {
+                    btn.textContent = '⏹️ Stop';
+                } else {
+                    btn.textContent = '▶️ Play';
+                }
+            }
+            
+            updateHUD() {
+                document.getElementById('scoreDisplay').textContent = this.engine.score;
+                document.getElementById('livesDisplay').textContent = '❤️'.repeat(this.engine.lives);
+                document.getElementById('timeDisplay').textContent = this.engine.time;
+            }
+            
+            updateStars(rating, hover) {
+                document.querySelectorAll('.star').forEach(star => {
+                    const starRating = parseInt(star.dataset.rating);
+                    if (starRating <= rating) {
+                        star.classList.add('active');
+                        star.classList.remove('inactive');
+                    } else {
+                        star.classList.remove('active');
+                        star.classList.add('inactive');
+                    }
+                });
+            }
+            
+            updateDNA() {
+                const genome = this.ga.getCurrentGenome();
+                const g = genome.genes;
+                
+                if (g.genre === 'platformer') {
+                    // Physics
+                    this.updateDNABar('gravity', g.gravity, [0.3, 1.0]);
+                    this.updateDNABar('jump', g.jumpForce, [10, 18]);
+                    this.updateDNABar('speed', g.playerSpeed, [3, 7]);
+                    this.updateDNABar('friction', g.friction, [0.5, 1.0]);
+                    
+                    // Level
+                    this.updateDNABar('platforms', g.platformCount, [5, 20], 0);
+                    this.updateDNABar('enemies', g.enemyCount, [0, 5], 0);
+                } else if (g.genre === 'runner') {
+                    this.updateDNABar('laneCount', g.laneCount, [2, 5], 0);
+                    this.updateDNABar('switchSpeed', g.switchSpeed, [0.1, 0.3], 2);
+                    this.updateDNABar('initialSpeed', g.initialSpeed, [4, 8]);
+                    this.updateDNABar('speedIncrease', g.speedIncrease, [0.0005, 0.0015], 4);
+                    this.updateDNABar('obstacleFrequency', g.obstacleFrequency, [0.01, 0.05], 3);
+                }
+
+                // Shared
+                this.updateDNABar('collectibles', g.collectibleFrequency, [0.3, 1.0], 2);
+                this.updateDNABar('collectibleValue', g.collectibleValue, [50, 200], 0);
+
+                // Style
+                document.getElementById('dna-palette-val').textContent = g.colorPalette;
+                this.updateDNALayout(g.genre);
+            }
+
+            updateDNALayout(genre) {
+                document.querySelectorAll('.dna-category').forEach(el => el.style.display = 'none');
+                document.querySelectorAll(`.dna-category.genre-${genre}, .dna-category.genre-shared`).forEach(el => {
+                    el.style.display = 'block';
+                });
+            }
+            
+            updateDNABar(name, value, range, decimals = 1) {
+                if (!document.getElementById(`dna-${name}`)) return; // Guard against missing elements
+                const percent = ((value - range[0]) / (range[1] - range[0])) * 100;
+                document.getElementById(`dna-${name}`).style.width = percent + '%';
+                document.getElementById(`dna-${name}-val`).textContent = value.toFixed(decimals);
+            }
+            
+            updateAllUI() {
+                const genome = this.ga.getCurrentGenome();
+                
+                // Game info
+                document.getElementById('gameName').textContent = 
+                    genome.name || `Game #${this.ga.currentIndex + 1}`;
+                document.getElementById('gameGenre').textContent = genome.genes.genre;
+                document.getElementById('gameGeneration').textContent = genome.generation;
+                document.getElementById('gameFitness').textContent = genome.fitness.toFixed(2);
+                document.getElementById('gameHighScore').textContent = genome.highScore;
+                document.getElementById('gamePlays').textContent = genome.plays;
+                
+                // Evolution stats
+                document.getElementById('generationStat').textContent = this.ga.generation;
+                document.getElementById('bestFitnessStat').textContent = 
+                    this.ga.getBestGenome().fitness.toFixed(2);
+                document.getElementById('avgFitnessStat').textContent = 
+                    this.ga.getAverageFitness().toFixed(2);
+                document.getElementById('populationStat').textContent = this.ga.populationSize;
+                
+                // Stars
+                this.updateStars(genome.userRating * 5, false);
+            }
+            
+            updateLibraryUI() {
+                const grid = document.getElementById('libraryGrid');
+                document.getElementById('libraryCount').textContent = this.library.length;
+                
+                if (this.library.length === 0) {
+                    grid.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: var(--spacing-xl);">
+                            No saved games yet. Save your favorites to build your library!
+                        </div>
+                    `;
+                    return;
+                }
+                
+                grid.innerHTML = '';
+                
+                for (const genome of this.library) {
+                    const item = document.createElement('div');
+                    item.className = 'library-item';
+                    
+                    item.innerHTML = `
+                        <h4>${genome.name || 'Unnamed Game'}</h4>
+                        <div class="library-item-stats">
+                            ⭐ Fitness: ${genome.fitness.toFixed(2)}<br>
+                            🏆 High Score: ${genome.highScore}<br>
+                            🎮 Gen: ${genome.generation} | Plays: ${genome.plays}
+                        </div>
+                        <div class="library-item-actions">
+                            <button class="load-btn">Load</button>
+                            <button class="delete-btn">Delete</button>
+                        </div>
+                    `;
+                    
+                    item.querySelector('.load-btn').addEventListener('click', () => {
+                        this.loadLibraryGame(genome);
+                    });
+                    
+                    item.querySelector('.delete-btn').addEventListener('click', () => {
+                        this.deleteLibraryGame(genome);
+                    });
+                    
+                    grid.appendChild(item);
+                }
+            }
+            
+            loadLibraryGame(genome) {
+                // Add to current population
+                this.ga.population[this.ga.currentIndex] = genome.clone();
+                this.loadGame(genome);
+                this.showNotification('Game loaded from library!', 'success');
+            }
+            
+            deleteLibraryGame(genome) {
+                if (confirm('Delete this game from library?')) {
+                    const index = this.library.indexOf(genome);
+                    if (index > -1) {
+                        this.library.splice(index, 1);
+                        this.saveLibrary();
+                        this.updateLibraryUI();
+                        this.showNotification('Game deleted', 'warning');
+                    }
+                }
+            }
+            
+            loadLibrary() {
+                try {
+                    const data = localStorage.getItem('gameforge_library');
+                    if (data) {
+                        const parsed = JSON.parse(data); 
+                        return parsed.map(g => {
+                            const genome = new Genome(g.genes);
+                            genome.fitness = g.fitness;
+                            genome.userRating = g.userRating;
+                            genome.generation = g.generation;
+                            genome.plays = g.plays;
+                            genome.highScore = g.highScore;
+                            genome.name = g.name;
+                            genome.id = g.id;
+                            return genome;
+                        });
+                    }
+                } catch (e) {
+                    console.error('Error loading library:', e);
+                }
+                return [];
+            }
+            
+            saveLibrary() {
+                try {
+                    const data = this.library.map(g => ({
+                        genes: g.genes,
+                        fitness: g.fitness,
+                        userRating: g.userRating,
+                        generation: g.generation,
+                        plays: g.plays,
+                        highScore: g.highScore,
+                        name: g.name,
+                        id: g.id
+                    }));
+                    localStorage.setItem('gameforge_library', JSON.stringify(data));
+                } catch (e) {
+                    console.error('Error saving library:', e);
+                }
+            }
+            
+            exportGame(genome) {
+                const data = {
+                    name: genome.name || 'Exported Game',
+                    genes: genome.genes,
+                    fitness: genome.fitness,
+                    generation: genome.generation,
+                    highScore: genome.highScore,
+                    plays: genome.plays,
+                    exportDate: new Date().toISOString()
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `gameforge_${data.name.replace(/\s+/g, '_')}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                this.showNotification('Game exported!', 'success');
+            }
+            
+            exportLibrary() {
+                if (this.library.length === 0) {
+                    this.showNotification('No games in library to export', 'warning');
+                    return;
+                }
+                
+                const data = {
+                    games: this.library.map(g => ({
+                        name: g.name,
+                        genes: g.genes,
+                        fitness: g.fitness,
+                        generation: g.generation,
+                        highScore: g.highScore,
+                        plays: g.plays
+                    })),
+                    exportDate: new Date().toISOString(),
+                    totalGames: this.library.length
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `gameforge_library_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                this.showNotification(`Library exported! (${this.library.length} games)`, 'success');
+            }
+            
+            showNotification(message, type = 'success') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+        }
+        
+        // ===========================
+        // INITIALIZATION
+        // ===========================
+        
+        let app;
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            app = new GameForgeApp();
+            
+            // Show welcome notification
+            setTimeout(() => {
+                app.showNotification('Welcome to GameForge! Rate games to guide evolution.', 'success');
+            }, 500);
+        });
+    </script>
+</body>
+</html>
