@@ -890,9 +890,10 @@
 
                 <!-- Export -->
                 <div class="control-group">
-                    <h3>💾 Export</h3>
+                    <h3>💾 Data Management</h3>
                     <button id="exportCurrentBtn" class="full-width-btn mb-sm">Export Current Game</button>
-                    <button id="exportLibraryBtn" class="full-width-btn">Export Library</button>
+                    <button id="exportLibraryBtn" class="full-width-btn mb-sm">Export Library</button>
+                    <button id="importLibraryBtn" class="full-width-btn">Import Library</button>
                 </div>
             </div>
         </div>
@@ -907,6 +908,8 @@
             </div>
         </div>
     </div>
+
+    <input type="file" id="importFileInput" accept=".json" style="display: none;">
 
     <script>
         // ===========================
@@ -1978,6 +1981,15 @@
                     this.exportLibrary();
                 });
 
+                document.getElementById('importLibraryBtn').addEventListener('click', () => {
+                    document.getElementById('importFileInput').click();
+                });
+
+                document.getElementById('importFileInput').addEventListener('change', (e) => {
+                    this.importLibrary(e.target.files[0]);
+                    e.target.value = ''; // Reset input to allow re-importing the same file
+                });
+
                 // Auto evolve (moved from duplicated section)
                 document.getElementById('autoEvolveBtn').addEventListener('click', () => {
                     this.toggleAutoEvolve();
@@ -2255,6 +2267,45 @@
                 }
             }
             
+            importLibrary(file) {
+                if (!file) {
+                    this.showNotification('No file selected.', 'warning');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (!data.games || !Array.isArray(data.games)) {
+                            throw new Error('Invalid library file format.');
+                        }
+
+                        if (!confirm(`This will add ${data.games.length} games to your library. Continue?`)) {
+                            return;
+                        }
+
+                        let importedCount = 0;
+                        for (const g of data.games) {
+                            // Basic validation
+                            if (g && g.genes) {
+                                const genome = new Genome(g.genes, g.genes.genre);
+                                Object.assign(genome, g); // Apply other properties
+                                this.library.push(genome);
+                                importedCount++;
+                            }
+                        }
+                        this.saveLibrary();
+                        this.updateLibraryUI();
+                        this.showNotification(`${importedCount} games successfully imported!`, 'success');
+                    } catch (error) {
+                        this.showNotification('Error importing library: ' + error.message, 'danger');
+                        console.error('Import error:', error);
+                    }
+                };
+                reader.readAsText(file);
+            }
+
             exportGame(genome) {
                 const data = {
                     name: genome.name || 'Exported Game',
